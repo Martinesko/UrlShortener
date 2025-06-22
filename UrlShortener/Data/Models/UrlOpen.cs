@@ -1,4 +1,4 @@
-﻿namespace UrlShortener.Models
+﻿namespace UrlShortener.Data.Models
 {
     public class UrlOpen
     {

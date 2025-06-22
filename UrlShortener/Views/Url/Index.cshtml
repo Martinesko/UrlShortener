@@ -1,0 +1,23 @@
+﻿@model UrlShortener.Models.UrlViewModel
+
+<link rel="stylesheet" href="~/css/urlshortener.css" />
+
+<div class="shortener-container">
+    <h1>URL Shortener</h1>
+    <form asp-action="Index" method="post">
+        <input asp-for="Url" />
+        <button type="submit">Shorten</button>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.ShortenedUrl))
+    {
+        <div class="result-container">
+            <div>
+                <strong>Shortened Link:</strong> <a href="@Model.ShortenedUrl">@Model.ShortenedUrl</a>
+            </div>
+            <div>
+                <strong>Stats Link:</strong> <a href="@Model.StatsUrl">@Model.StatsUrl</a>
+            </div>
+        </div>
+    }
+</div>

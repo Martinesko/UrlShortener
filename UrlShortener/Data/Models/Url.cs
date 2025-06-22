@@ -1,12 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace UrlShortener.Models
+namespace UrlShortener.Data.Models
 {
     public class Url
     {
         public int Id { get; set; }
         public string OriginalUrl { get; set; } = string.Empty;
         public string ShortenedUrl { get; set; } = string.Empty;
+
+        public string SecretCode { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using UrlShortener.Models;
+using UrlShortener.Data.Models;
 
 namespace UrlShortener.Data
 {
@@ -8,7 +8,7 @@ namespace UrlShortener.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) 
         { 
         }
-        public DbSet<Url> urls { get; set; }
+        public DbSet<Url> Urls { get; set; }
         public DbSet<UrlOpen> UrlOpens { get; set; }
 
     }

@@ -1,6 +1,6 @@
 using UrlShortener.Data;
-using Microsoft.EntityFrameworkCore; // Add this using directive
-
+using Microsoft.EntityFrameworkCore;
+using UrlShortener.Services;
 namespace UrlShortener
 {
     public class Program
@@ -9,15 +9,18 @@ namespace UrlShortener
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages();
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); // Pass connection string
 
+            builder.Services.AddScoped<IUrlService, UrlService>();
+
+
+            builder.Services.AddHttpContextAccessor();
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
@@ -32,8 +35,14 @@ namespace UrlShortener
             app.MapStaticAssets();
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
+                pattern: "{controller=Url}/{action=Index}/{id?}")
                 .WithStaticAssets();
+            app.MapControllerRoute(
+                name: "short",
+               pattern: "{shortCode}",
+                defaults: new { controller = "Url", action = "RedirectToOriginal" });
+
+
 
             app.Run();
         }
