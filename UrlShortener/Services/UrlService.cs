@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using UrlShortener.Data;
 using UrlShortener.Data.Models;
@@ -12,52 +10,56 @@ namespace UrlShortener.Services
     {
         private readonly AppDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<UrlService> _logger;
 
-        public UrlService(AppDbContext context, IHttpContextAccessor httpContextAccessor)
+        public UrlService(AppDbContext context, IHttpContextAccessor httpContextAccessor, ILogger<UrlService> logger)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
         }
 
         [HttpPost]
         public async Task<UrlViewModel> ShortenUrl(UrlViewModel viewModel)
         {
-            string originalUrl = viewModel.Url;
-            if (string.IsNullOrWhiteSpace(originalUrl) || !Uri.IsWellFormedUriString(originalUrl, UriKind.Absolute))
-                throw new ArgumentException("Invalid URL");
-
-
-            var shortCode = GenerateShortCode();
-            var secretCode = GenerateSecretCode();
-
-            var url = new Url
+            try
             {
-                OriginalUrl = originalUrl,
-                ShortenedUrl = shortCode,
-                SecretCode = secretCode,
-                CreatedAt = DateTime.UtcNow
-            };
+                string originalUrl = viewModel.Url;
+                if (string.IsNullOrWhiteSpace(originalUrl) || !Uri.IsWellFormedUriString(originalUrl, UriKind.Absolute))
+                    throw new ArgumentException("Invalid URL");
 
+                var shortCode = GenerateShortCode();
+                var secretCode = GenerateSecretCode();
 
+                var url = new Url
+                {
+                    OriginalUrl = originalUrl,
+                    ShortenedUrl = shortCode,
+                    SecretCode = secretCode,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-            _context.Urls.Add(url);
-            await _context.SaveChangesAsync();
+                _context.Urls.Add(url);
+                await _context.SaveChangesAsync();
 
-            var baseUrl = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}";
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext == null)
+                    throw new InvalidOperationException("No HTTP context available.");
 
-            var response = new
+                var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+
+                return new UrlViewModel
+                {
+                    ShortenedUrl = $"{baseUrl}/{shortCode}",
+                    StatsUrl = $"{baseUrl}/stats/{secretCode}",
+                    Url = originalUrl
+                };
+            }
+            catch (Exception ex)
             {
-                ShortenedUrl = $"{baseUrl}/{shortCode}",
-                StatsUrl = $"{baseUrl}/stats/{secretCode}"
-            };
-            UrlViewModel model = new UrlViewModel
-            {
-                ShortenedUrl = $"{baseUrl}/{shortCode}",
-                StatsUrl = $"{baseUrl}/stats/{secretCode}",
-                Url = originalUrl
-            };
-            return model;
-
+                _logger.LogError(ex, "Error in ShortenUrl");
+                throw;
+            }
         }
 
         private string GenerateShortCode()
@@ -72,66 +74,79 @@ namespace UrlShortener.Services
 
         public async Task<IActionResult> RedirectToOr(string shortCode)
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-            var url = await _context.Urls.FirstOrDefaultAsync(e => e.ShortenedUrl == shortCode);
-           
-            var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            string ip;
-
-
-            if (url == null)
+            try
             {
-                return new NotFoundObjectResult("Short Url not Found!");
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext == null)
+                    return new StatusCodeResult(500);
+
+                var url = await _context.Urls.FirstOrDefaultAsync(e => e.ShortenedUrl == shortCode);
+
+                if (url == null)
+                {
+                    return new NotFoundObjectResult("Short Url not Found!");
+                }
+
+                var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+                string ip = forwardedFor != null
+                    ? forwardedFor.Split(',')[0].Trim()
+                    : httpContext.Connection.RemoteIpAddress?.ToString();
+
+                UrlOpen open = new UrlOpen
+                {
+                    OpendAt = DateTime.UtcNow,
+                    urlId = url.Id,
+                    IpAddress = ip
+                };
+
+                _context.UrlOpens.Add(open);
+                await _context.SaveChangesAsync();
+
+                return new RedirectResult(url.OriginalUrl);
             }
-
-            if (forwardedFor != null) 
-                ip = forwardedFor.Split(',')[0].Trim();
-            else 
-                ip = httpContext.Connection.RemoteIpAddress?.ToString();
-
-            UrlOpen open = new UrlOpen
+            catch (Exception ex)
             {
-                OpendAt = DateTime.UtcNow,
-                urlId = url.Id,
-                IpAddress = ip
-            };
-
-            _context.UrlOpens.Add(open);
-            await _context.SaveChangesAsync();
-         
-            return new RedirectResult(url.OriginalUrl);
+                _logger.LogError(ex, "Error in RedirectToOr");
+                return new StatusCodeResult(500);
+            }
         }
 
         public async Task<StatsViewModel> GetSecret(string secretCode)
         {
-
-            var url = await _context.Urls.FirstOrDefaultAsync(u => u.SecretCode == secretCode);
-            var opens = _context.UrlOpens.Where(e => e.urlId == url.Id);
-
-            if (url == null)
-                return null;
-
-            var uniqueVisitsPerDay = opens
-                .GroupBy(o => o.OpendAt.Date)
-                .Select(g => new { Date = g.Key, Count = g.Select(x => x.IpAddress).Distinct().Count() })
-                .OrderBy(x => x.Date)
-                .ToList();
-
-            var topIps = opens
-            .GroupBy(o => o.IpAddress)
-            .Select(g => new { Ip = g.Key, Count = g.Count() })
-            .OrderByDescending(x => x.Count)
-            .Take(10)
-            .Cast<object>()
-            .ToList();
-
-            return new StatsViewModel
+            try
             {
-                Url = url,
-                UniqueVisitsPerDay = uniqueVisitsPerDay.Cast<object>().ToList(),
-                TopIps = topIps
-            };
+                var url = await _context.Urls.FirstOrDefaultAsync(u => u.SecretCode == secretCode);
+                if (url == null)
+                    return null;
 
+                var opens = _context.UrlOpens.Where(e => e.urlId == url.Id);
+
+                var uniqueVisitsPerDay = opens
+                    .GroupBy(o => o.OpendAt.Date)
+                    .Select(g => new { Date = g.Key, Count = g.Select(x => x.IpAddress).Distinct().Count() })
+                    .OrderBy(x => x.Date)
+                    .ToList();
+
+                var topIps = opens
+                    .GroupBy(o => o.IpAddress)
+                    .Select(g => new { Ip = g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .Take(10)
+                    .Cast<object>()
+                    .ToList();
+
+                return new StatsViewModel
+                {
+                    Url = url,
+                    UniqueVisitsPerDay = uniqueVisitsPerDay.Cast<object>().ToList(),
+                    TopIps = topIps
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSecret");
+                return null;
+            }
         }
     }
 }

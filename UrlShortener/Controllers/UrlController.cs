@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Logging;
 using UrlShortener.Models;
 using UrlShortener.Services;
 
@@ -10,10 +11,14 @@ namespace UrlShortener.Controllers;
 public class UrlController : Controller
 {
     private readonly IUrlService _urlService;
+    private readonly ILogger<UrlController> _logger;
 
-    public UrlController(IUrlService urlService)
+
+    public UrlController(IUrlService urlService , ILogger<UrlController> logger)
     {
         _urlService = urlService;
+        _logger = logger;
+
     }
 
     [HttpGet]
@@ -25,26 +30,50 @@ public class UrlController : Controller
     [HttpPost]
     public async Task<IActionResult> Index(UrlViewModel model)
     {
-        var modell = await _urlService.ShortenUrl(model);
-        return View(modell);
-    }
+        try
+        {
+            var modell = await _urlService.ShortenUrl(model);
+            return View(modell);
 
-    public IActionResult Privacy()
-    {
-        return View();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred.");
+            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
+            return RedirectToPage("/Error");
+        }
+
     }
 
     [Route("{shortCode}")]
     public async Task<IActionResult> RedirectTOriginal(string shortCode)
     {
-        return await _urlService.RedirectToOr(shortCode);
+        try
+        {
+            return await _urlService.RedirectToOr(shortCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred.");
+            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
+            return RedirectToPage("/Error");
+        }
     }
 
     [Route("stats/{secretCode}")]
     public async Task<IActionResult> Stats(string secretCode)
     {
-        var model = await _urlService.GetSecret(secretCode);
-        return View(model);
+        try
+        {
+            var model = await _urlService.GetSecret(secretCode);
+            return View(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred.");
+            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
+            return RedirectToPage("/Error");
+        }
     }
 }
 
