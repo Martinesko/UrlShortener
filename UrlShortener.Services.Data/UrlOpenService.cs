@@ -1,9 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UrlShortener.Data;
 using UrlShortener.Data.Models;
 using UrlShortener.Services.Data.Contracts;
@@ -31,9 +26,9 @@ namespace UrlShortener.Services.Data
             context.UrlOpens.Add(urlOpen);
             await context.SaveChangesAsync();
         }
-        public async Task<StatsViewModel?> GetSecret(string statusCode)
+        public async Task<StatsViewModel> GetStatsAsync(string statsCode)
         {
-            var opens = context.UrlOpens.Where(e => e.Url.StatsUrl == statusCode);
+            var opens = context.UrlOpens.Include(uo => uo.Url).Where(e => e.Url.StatsUrl == statsCode);
 
             var uniqueVisitsPerDay = await opens
                 .GroupBy(o => o.OpendAt.Date)
@@ -48,9 +43,12 @@ namespace UrlShortener.Services.Data
                 .Take(10)
                 .ToListAsync();
 
+            var url = context.Urls.First(u => u.StatsUrl == statsCode);
+
             return new StatsViewModel
             {
-                Url = opens.Select(o => o.Url).First(),
+                OriginalUrl = url.OriginalUrl,
+                ShortUrl = url.ShortenedUrl,
                 UniqueVisitsPerDay = uniqueVisitsPerDay.ToList(),
                 TopIps = topIps
             };

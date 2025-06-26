@@ -1,18 +1,13 @@
 ﻿@model StatsViewModel
-@{
-    var uniqueVisits = Model?.UniqueVisitsPerDay ?? Enumerable.Empty<dynamic>();
-    var topIps = Model?.TopIps ?? Enumerable.Empty<dynamic>();
-    var url = Model?.Url;
-}
 
-<h2>Stats for: @(url?.OriginalUrl ?? "N/A")</h2>
-
+<h2>Stats for: @($"{Model.OriginalUrl} ({Model.ShortUrl})" ?? "N/A")</h2>
 <h3>Unique Visits Per Day</h3>
-@if (uniqueVisits.Any())
+
+@if (Model.UniqueVisitsPerDay.Any())
 {
     <table class="stats-table">
         <tr><th>Date</th><th>Unique Visits</th></tr>
-        @foreach (var day in uniqueVisits)
+        @foreach (var day in Model.UniqueVisitsPerDay)
         {
             <tr>
                 <td>@day.Date.ToShortDateString()</td>
@@ -27,11 +22,12 @@ else
 }
 
 <h3>Top 10 IPs</h3>
-@if (topIps.Any())
+
+@if (Model.TopIps.Any())
 {
     <table class="stats-table">
         <tr><th>IP Address</th><th>Visits</th></tr>
-        @foreach (var ip in topIps)
+        @foreach (var ip in Model.TopIps)
         {
             <tr>
                 <td>@ip.Ip</td>
@@ -45,7 +41,7 @@ else
     <p>No IP data available.</p>
 }
 
-@if (uniqueVisits.Any())
+@if (Model.UniqueVisitsPerDay.Any())
 {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <canvas id="visitsChart" width="400" height="200"></canvas>
@@ -54,10 +50,10 @@ else
         var chart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: [@Html.Raw(string.Join(",", uniqueVisits.Select(u => $"'{u.Date.ToShortDateString()}'")))],
+                labels: [@Html.Raw(string.Join(",", Model.UniqueVisitsPerDay.Select(u => $"'{u.Date.ToShortDateString()}'")))],
                 datasets: [{
                     label: 'Unique Visits Per Day',
-                    data: [@string.Join(",", uniqueVisits.Select(u => u.Count))],
+                    data: [@string.Join(",", Model.UniqueVisitsPerDay.Select(u => u.Count))],
                     backgroundColor: 'rgba(54, 162, 235, 0.5)'
                 }]
             }

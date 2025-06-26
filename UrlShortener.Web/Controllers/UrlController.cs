@@ -10,7 +10,6 @@ public class UrlController : Controller
     private readonly IUrlService urlService;
     private readonly IUrlOpenService urlOpenService;
 
-
     public UrlController(IUrlService urlService, IUrlOpenService urlOpenService)
     {
         this.urlService = urlService;
@@ -45,7 +44,6 @@ public class UrlController : Controller
         }
         catch (Exception)
         {
-            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
             return RedirectToAction("Index");
         }
     }
@@ -59,7 +57,7 @@ public class UrlController : Controller
 
             var ip = !string.IsNullOrWhiteSpace(forwardedFor)
                 ? forwardedFor.Split(',')[0].Trim()
-                : HttpContext.Connection.RemoteIpAddress?.ToString();
+                : HttpContext.Connection.RemoteIpAddress!.ToString();
 
             var urlId = await urlService.GetIdAsync(shortCode);
 
@@ -70,8 +68,7 @@ public class UrlController : Controller
         }
         catch (Exception)
         {
-            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
-            return RedirectToPage("/Error");
+            return RedirectToAction("Index");
         }
     }
 
@@ -80,15 +77,12 @@ public class UrlController : Controller
     {
         try
         {
-            var model = await urlOpenService.GetSecret(secretCode);
+            var model = await urlOpenService.GetStatsAsync(secretCode);
             return View(model);
         }
         catch (Exception)
         {
-            TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
-            return RedirectToPage("/Error");
+            return RedirectToAction("Index");
         }
     }
 }
-
-

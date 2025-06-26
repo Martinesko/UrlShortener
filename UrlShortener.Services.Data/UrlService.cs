@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using UrlShortener.Data.Models;
 using UrlShortener.Web.ViewModels;
-using Microsoft.Extensions.Logging;
 using UrlShortener.Services.Data.Contracts;
 using UrlShortener.Data;
 
@@ -38,6 +37,5 @@ namespace UrlShortener.Services.Data
         {
             return (await context.Urls.FindAsync(id))!.OriginalUrl;
         }
-
     }
 }

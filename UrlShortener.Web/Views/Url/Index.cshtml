@@ -1,7 +1,5 @@
 ﻿@model UrlViewModel
 
-<link rel="stylesheet" href="~/css/urlshortener.css" />
-
 <div class="shortener-container">
     <h1>URL Shortener</h1>
     <form asp-action="Index" method="post">
@@ -10,21 +8,35 @@
         <span asp-validation-for="Url" class="text-danger"></span>
         <button type="submit">Shorten</button>
     </form>
-
-    @if (!string.IsNullOrEmpty(Model.ShortenedUrl))
-    {
-        <div class="result-container">
-            <div>
-                <strong>Shortened Link:</strong> <a href="@Model.ShortenedUrl">@Model.ShortenedUrl</a>
-            </div>
-            <div>
-                <strong>Stats Link:</strong> <a href="@Model.StatsUrl">@Model.StatsUrl</a>
-            </div>
-        </div>
-    }
 </div>
 
+@if (!string.IsNullOrEmpty(Model.ShortenedUrl))
+{
+    <div class="result-container">
+        <div>
+            <strong>Shortened Link:</strong>
+            <input type="text" readonly value="@Model.ShortenedUrl" id="shortLink" class="copy-box" />
+            <button type="button" onclick="copyToClipboard('shortLink')">Copy</button>
+        </div>
+        <div>
+            <strong>Stats Link:</strong>
+            <input type="text" readonly value="@Model.StatsUrl" id="statsLink" class="copy-box" />
+            <button type="button" onclick="copyToClipboard('statsLink')">Copy</button>
+        </div>
+    </div>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/urlshortener.css" />
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        function copyToClipboard(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            document.execCommand("copy");
+        }
+    </script>
 }
