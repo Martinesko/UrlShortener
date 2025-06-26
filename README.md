@@ -15,7 +15,7 @@ A simple and efficient URL shortening web application built with ASP.NET Core an
 - .NET 8 (ASP.NET Core)
 - C#
 - Entity Framework Core
-- SQL Server (or SQLite for testing)
+- SQL Server 
 - Razor Pages
 - Bootstrap (for styling)
 
@@ -24,7 +24,7 @@ A simple and efficient URL shortening web application built with ASP.NET Core an
 ### Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
-- [SQL Server](https://www.microsoft.com/en-us/sql-server) or SQLite
+- [SQL Server](https://www.microsoft.com/en-us/sql-server) 
 
 ### Setup Instructions
 
