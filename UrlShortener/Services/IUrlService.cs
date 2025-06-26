@@ -7,6 +7,6 @@ namespace UrlShortener.Services
     {
         public Task<UrlViewModel> ShortenUrl(UrlViewModel viewModel);
         public Task<IActionResult> RedirectToOr(string shortCode);
-        public Task<StatsViewModel> GetSecret(string secretCode);
+        public Task<StatsViewModel?> GetSecret(string secretCode);
        }
 }

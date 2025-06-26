@@ -1,0 +1,30 @@
+﻿@model UrlViewModel
+
+<link rel="stylesheet" href="~/css/urlshortener.css" />
+
+<div class="shortener-container">
+    <h1>URL Shortener</h1>
+    <form asp-action="Index" method="post">
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <input asp-for="Url" />
+        <span asp-validation-for="Url" class="text-danger"></span>
+        <button type="submit">Shorten</button>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.ShortenedUrl))
+    {
+        <div class="result-container">
+            <div>
+                <strong>Shortened Link:</strong> <a href="@Model.ShortenedUrl">@Model.ShortenedUrl</a>
+            </div>
+            <div>
+                <strong>Stats Link:</strong> <a href="@Model.StatsUrl">@Model.StatsUrl</a>
+            </div>
+        </div>
+    }
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

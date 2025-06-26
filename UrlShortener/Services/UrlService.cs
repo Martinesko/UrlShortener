@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using UrlShortener.Data;
 using UrlShortener.Data.Models;
 using UrlShortener.Models;
+using Microsoft.Extensions.Logging;
 
 namespace UrlShortener.Services
 {
@@ -18,13 +19,11 @@ namespace UrlShortener.Services
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
         }
-
-        [HttpPost]
         public async Task<UrlViewModel> ShortenUrl(UrlViewModel viewModel)
         {
             try
             {
-                string originalUrl = viewModel.Url;
+                var originalUrl = viewModel.Url;
                 if (string.IsNullOrWhiteSpace(originalUrl) || !Uri.IsWellFormedUriString(originalUrl, UriKind.Absolute))
                     throw new ArgumentException("Invalid URL");
 
@@ -62,12 +61,12 @@ namespace UrlShortener.Services
             }
         }
 
-        private string GenerateShortCode()
+        private static string GenerateShortCode()
         {
-            return Guid.NewGuid().ToString("N").Substring(0, 6);
+            return Guid.NewGuid().ToString("N")[..6];
         }
 
-        private string GenerateSecretCode()
+        private static string GenerateSecretCode()
         {
             return Guid.NewGuid().ToString("N");
         }
@@ -88,17 +87,18 @@ namespace UrlShortener.Services
                 }
 
                 var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-                string ip = forwardedFor != null
+                var ip = !string.IsNullOrWhiteSpace(forwardedFor)
                     ? forwardedFor.Split(',')[0].Trim()
                     : httpContext.Connection.RemoteIpAddress?.ToString();
-
-                UrlOpen open = new UrlOpen
+                var open = new UrlOpen
                 {
                     OpendAt = DateTime.UtcNow,
                     urlId = url.Id,
-                    IpAddress = ip
                 };
-
+                if (ip != null)
+                {
+                    open.IpAddress = ip;
+                }
                 _context.UrlOpens.Add(open);
                 await _context.SaveChangesAsync();
 
@@ -111,7 +111,7 @@ namespace UrlShortener.Services
             }
         }
 
-        public async Task<StatsViewModel> GetSecret(string secretCode)
+        public async Task<StatsViewModel?> GetSecret(string secretCode)
         {
             try
             {
@@ -121,19 +121,19 @@ namespace UrlShortener.Services
 
                 var opens = _context.UrlOpens.Where(e => e.urlId == url.Id);
 
-                var uniqueVisitsPerDay = opens
+                var uniqueVisitsPerDay = await opens
                     .GroupBy(o => o.OpendAt.Date)
                     .Select(g => new { Date = g.Key, Count = g.Select(x => x.IpAddress).Distinct().Count() })
                     .OrderBy(x => x.Date)
-                    .ToList();
+                    .ToListAsync();
 
-                var topIps = opens
+                var topIps = await opens
                     .GroupBy(o => o.IpAddress)
                     .Select(g => new { Ip = g.Key, Count = g.Count() })
                     .OrderByDescending(x => x.Count)
                     .Take(10)
                     .Cast<object>()
-                    .ToList();
+                    .ToListAsync();
 
                 return new StatsViewModel
                 {
